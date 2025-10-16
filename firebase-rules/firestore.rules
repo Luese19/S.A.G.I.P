@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUserData() {
+      return request.resource.data.keys().hasAll(['uid', 'displayName', 'email', 'xp', 'matchesPlayed', 'bestScore', 'createdAt', 'updatedAt'])
+        && request.resource.data.uid is string
+        && request.resource.data.displayName is string
+        && request.resource.data.email is string
+        && request.resource.data.xp is number
+        && request.resource.data.matchesPlayed is number
+        && request.resource.data.bestScore is number;
+    }
+
+    // Users collection - Users can read/write their own profiles
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      allow create: if isAuthenticated() && isValidUserData() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // Quizzes collection - Read-only for all authenticated users
+    match /quizzes/{quizId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only server-side functions can write
+    }
+
+    // Questions collection - Read-only for all authenticated users
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only server-side functions can write
+    }
+
+    // Leaderboards collection - Read-only for all authenticated users
+    match /leaderboards/{document} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only server-side functions can write
+    }
+
+    // Matches collection - Read-only for participants, write-only for server functions
+    match /matches/{matchId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only server-side functions can write
+    }
+
+    // Analytics collection - Write-only for server functions
+    match /analytics/{document} {
+      allow read: if false; // No client reads
+      allow write: if false; // Only server-side functions can write
+    }
+  }
+}

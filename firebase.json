@@ -1,0 +1,8 @@
+{
+  "database": {
+    "rules": "firebase-rules/realtimedb.rules"
+  },
+  "firestore": {
+    "rules": "firebase-rules/firestore.rules"
+  }
+}
