@@ -86,6 +86,14 @@ export const joinMatchmaking = createAsyncThunk(
         throw new Error(response.error || 'Failed to join matchmaking');
       }
     } catch (error: any) {
+      console.error('[Matchmaking] Join matchmaking error:', error);
+
+      // Handle authentication-specific errors
+      if (error.message && error.message.includes('authenticated')) {
+        console.error('[Matchmaking] Authentication error detected');
+        // You might want to dispatch a logout action or redirect to login
+      }
+
       NetworkErrorHandler.logError(error, 'joinMatchmaking');
       const parsedError = NetworkErrorHandler.parseError(error);
       return rejectWithValue(parsedError.message);
@@ -111,6 +119,13 @@ export const leaveMatchmaking = createAsyncThunk(
       await DatabaseService.leaveMatchmaking(userId);
       return true;
     } catch (error: any) {
+      console.error('[Matchmaking] Leave matchmaking error:', error);
+
+      // Handle authentication-specific errors
+      if (error.message && error.message.includes('authenticated')) {
+        console.error('[Matchmaking] Authentication error detected during leave');
+      }
+
       NetworkErrorHandler.logError(error, 'leaveMatchmaking');
       const parsedError = NetworkErrorHandler.parseError(error);
       return rejectWithValue(parsedError.message);
@@ -218,6 +233,11 @@ const matchmakingSlice = createSlice({
         state.isSearching = false;
         state.error = action.payload as string;
         state.retryCount += 1;
+
+        // If authentication error, suggest re-login
+        if (action.payload && action.payload.toString().includes('authenticated')) {
+          console.warn('[Matchmaking] Authentication error - user may need to re-login');
+        }
       })
 
       // Leave matchmaking
@@ -237,6 +257,11 @@ const matchmakingSlice = createSlice({
       .addCase(leaveMatchmaking.rejected, (state, action) => {
         state.isSearching = false;
         state.error = action.payload as string;
+
+        // If authentication error, suggest re-login
+        if (action.payload && action.payload.toString().includes('authenticated')) {
+          console.warn('[Matchmaking] Authentication error during leave - user may need to re-login');
+        }
       })
 
       // Cleanup listener
